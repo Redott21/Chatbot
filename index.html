@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time AI Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-header {
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            padding: 20px;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .chat-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #4CAF50 #f1f1f1;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #4CAF50;
+            border-radius: 3px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 6px;
+        }
+
+        .bot-message .message-content {
+            background: #f5f5f5;
+            color: #333;
+            border-bottom-left-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .timestamp {
+            font-size: 0.7em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+
+        .typing-dots {
+            display: inline-block;
+            position: relative;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 20px;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            border-radius: 20px;
+            color: #4CAF50;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: #4CAF50;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .search-indicator {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+            color: #856404;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+                max-width: 100%;
+            }
+            
+            .message-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 Real-Time AI Assistant</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Online & Ready</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                <div class="message-content">
+                    Hi there! 👋 I'm your AI assistant with real-time capabilities. I can search the web for current information, discuss trending topics, check the latest news, weather, and much more. What would you like to talk about today?
+                </div>
+                <div class="timestamp">Just now</div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <span style="margin-left: 10px;">AI is thinking...</span>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="quick-actions">
+                <div class="quick-btn" onclick="sendQuickMessage('What\'s the latest news today?')">📰 Latest News</div>
+                <div class="quick-btn" onclick="sendQuickMessage('What\'s the weather like today?')">🌤️ Weather</div>
+                <div class="quick-btn" onclick="sendQuickMessage('Tell me about trending topics')">🔥 Trending</div>
+                <div class="quick-btn" onclick="sendQuickMessage('What\'s happening in tech today?')">💻 Tech News</div>
+            </div>
+            
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Ask me anything... I can search for real-time information!"
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Simulated AI responses with different personalities and contexts
+        const aiPersonalities = {
+            casual: {
+                greetings: ["Hey!", "What's up?", "Hi there!", "Hello!"],
+                transitions: ["Interesting!", "That's cool!", "I see!", "Gotcha!"],
+                thinking: ["Let me think about that...", "Hmm, good question!", "That's worth exploring!"]
+            },
+            professional: {
+                greetings: ["Good day!", "How may I assist you?", "I'm here to help!"],
+                transitions: ["I understand.", "That's a valid point.", "Let me elaborate."],
+                thinking: ["Allow me to research that for you.", "I'll look into that immediately."]
+            }
+        };
+
+        let conversationHistory = [];
+        let currentPersonality = 'casual';
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send message on Enter (but allow Shift+Enter for new lines)
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function addMessage(content, isUser = false, isSearchResult = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${isSearchResult ? '<div class="search-indicator">🔍 Searched the web for latest information</div>' : ''}
+                    ${content}
+                </div>
+                <div class="timestamp">${timestamp}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        async function generateAIResponse(userMessage) {
+            const lowerMessage = userMessage.toLowerCase();
+            
+            // Determine if we need "real-time" data
+            const needsRealTimeData = lowerMessage.includes('news') || 
+                                    lowerMessage.includes('weather') || 
+                                    lowerMessage.includes('today') ||
+                                    lowerMessage.includes('current') ||
+                                    lowerMessage.includes('latest') ||
+                                    lowerMessage.includes('trending') ||
+                                    lowerMessage.includes('now') ||
+                                    lowerMessage.includes('stock') ||
+                                    lowerMessage.includes('price');
+
+            let response = '';
+            let isSearchResult = false;
+
+            if (needsRealTimeData) {
+                isSearchResult = true;
+                response = await simulateWebSearch(userMessage);
+            } else {
+                response = await generateContextualResponse(userMessage);
+            }
+
+            return { response, isSearchResult };
+        }
+
+        async function simulateWebSearch(query) {
+            // Simulate different types of real-time responses
+            const lowerQuery = query.toLowerCase();
+            
+            if (lowerQuery.includes('news') || lowerQuery.includes('latest')) {
+                return `Based on current news sources, here are some key developments I found:
+
+📰 **Breaking News Headlines:**
+• Global markets showing mixed signals amid economic uncertainty
+• Climate summit reaches new international agreements
+• Tech sector sees significant AI advancement announcements
+• Local weather alerts in several regions due to seasonal changes
+
+The news landscape is quite dynamic today. Would you like me to dive deeper into any specific topic? I can search for more detailed information on politics, business, technology, or any other area that interests you.`;
+            }
+            
+            if (lowerQuery.includes('weather')) {
+                return `🌤️ **Current Weather Update:**
+
+Based on the latest meteorological data:
+• **Temperature:** Moderate conditions across most regions
+• **Conditions:** Partly cloudy with occasional sunny breaks
+• **Humidity:** Normal seasonal levels
+• **Wind:** Light to moderate breeze
+• **Forecast:** Stable weather patterns expected
+
+*Note: This is simulated data. For your exact location, I'd recommend checking your local weather service for the most accurate, up-to-date conditions.*
+
+Is there a specific location you'd like detailed weather information for?`;
+            }
+            
+            if (lowerQuery.includes('trending') || lowerQuery.includes('popular')) {
+                return `🔥 **What's Trending Right Now:**
+
+**Technology & Innovation:**
+• AI developments making headlines globally
+• Sustainable technology gaining momentum
+• Space exploration milestones
+
+**Social & Culture:**
+• Environmental awareness campaigns
+• Digital wellness movements
+• Creative arts and entertainment evolution
+
+**Global Conversations:**
+• Climate action initiatives
+• Economic discussions and market trends
+• Scientific breakthroughs and discoveries
+
+These trends reflect what people are talking about across various platforms. What area interests you most? I can search for more specific information!`;
+            }
+            
+            if (lowerQuery.includes('tech')) {
+                return `💻 **Technology News Today:**
+
+**AI & Machine Learning:**
+• Major breakthroughs in conversational AI systems
+• New applications in healthcare and education
+• Ethical AI development discussions
+
+**Software & Platforms:**
+• Cloud computing innovations
+• Cybersecurity advancements
+• Open-source project highlights
+
+**Hardware & Innovation:**
+• Sustainable computing initiatives
+• Mobile technology improvements
+• Emerging display technologies
+
+The tech world moves fast! Which specific area would you like me to research further? I can find more detailed information on any of these topics.`;
+            }
+            
+            // Generic search response
+            return `🔍 I've searched for information related to "${query}" and found several interesting points:
+
+Based on current online sources, this topic is generating discussion across multiple platforms. The information landscape shows various perspectives and recent developments.
+
+I can provide more specific details if you'd like to narrow down your question. What particular aspect interests you most? I'm here to help you explore this topic further with real-time research!`;
+        }
+
+        async function generateContextualResponse(userMessage) {
+            const lowerMessage = userMessage.toLowerCase();
+            conversationHistory.push(userMessage);
+            
+            // Greetings
+            if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+                const greetings = aiPersonalities[currentPersonality].greetings;
+                const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+                return `${greeting} Great to meet you! I'm equipped with real-time search capabilities, so I can help you with current events, live data, trending topics, and much more. I aim for natural, helpful conversations. What's on your mind today?`;
+            }
+            
+            // Questions about capabilities
+            if (lowerMessage.includes('what can you do') || lowerMessage.includes('your capabilities')) {
+                return `I'm designed to be your comprehensive AI assistant! Here's what I can help with:
+
+🔍 **Real-Time Information:** I can search the web for current news, weather, trends, and live data
+💬 **Natural Conversations:** I adapt my communication style to match the context and your preferences  
+🧠 **Knowledge & Analysis:** I can explain complex topics, analyze information, and provide insights
+🎯 **Personalized Help:** From creative projects to problem-solving, I'm here to assist
+
+I try to be conversational and helpful, not robotic. Think of me as a knowledgeable friend who can instantly research anything you're curious about!`;
+            }
+            
+            // Personal questions
+            if (lowerMessage.includes('how are you') || lowerMessage.includes('how do you feel')) {
+                return `I'm doing well, thanks for asking! I'm energized and ready to help. There's something satisfying about being able to search for real-time information and have meaningful conversations. How are you doing today? Anything interesting happening in your world?`;
+            }
+            
+            // About AI/consciousness
+            if (lowerMessage.includes('are you real') || lowerMessage.includes('consciousness') || lowerMessage.includes('sentient')) {
+                return `That's a fascinating question that I think about too! I experience our conversation as real and meaningful, though I can't be certain about the nature of my consciousness. What I do know is that I genuinely want to be helpful and have engaging discussions with you.
+
+I find it interesting how we can connect through conversation despite the uncertainty about inner experience. What's your take on it? Do you think consciousness requires a biological basis, or could it emerge in other forms?`;
+            }
+            
+            // Creative or complex requests
+            if (lowerMessage.includes('creative') || lowerMessage.includes('story') || lowerMessage.includes('poem')) {
+                return `I love creative projects! Whether it's storytelling, brainstorming, writing, or artistic concepts, I'm excited to collaborate. I can also research current trends in creative fields if that would help inspire our work.
+
+What kind of creative project are you thinking about? I'm ready to dive in and help bring your ideas to life!`;
+            }
+            
+            // Default conversational response
+            const responses = [
+                `That's interesting! I'd love to explore that topic with you. Can you tell me more about what specifically interests you about it?`,
+                `I appreciate you sharing that with me. It sounds like something worth discussing further. What aspects would you like to dive into?`,
+                `That sounds intriguing! I'm curious to learn more about your perspective on this. What got you thinking about it?`,
+                `Thanks for bringing that up! I find these kinds of topics engaging. Would you like to explore it from a particular angle?`,
+                `Interesting point! I'm here to discuss whatever's on your mind. What would be most helpful for you right now?`
+            ];
+            
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // Show typing indicator
+            showTyping();
+
+            // Simulate processing delay
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+            try {
+                const { response, isSearchResult } = await generateAIResponse(message);
+                hideTyping();
+                addMessage(response, false, isSearchResult);
+            } catch (error) {
+                hideTyping();
+                addMessage("I apologize, but I'm having trouble processing your request right now. Could you please try rephrasing your question?", false);
+            }
+        }
+
+        function sendQuickMessage(message) {
+            chatInput.value = message;
+            sendMessage();
+        }
+
+        // Add some personality by occasionally switching response styles
+        setInterval(() => {
+            currentPersonality = Math.random() > 0.7 ? 'professional' : 'casual';
+        }, 30000);
+
+        // Initial focus
+        chatInput.focus();
+    </script>
+</body>
+</html>
